@@ -1,17 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Header } from './components/Header';
-import { TierSelector } from './components/TierSelector';
-import { StakeForm } from './components/StakeForm';
-import { StakeDashboard } from './components/StakeDashboard';
-import { RewardCounter } from './components/RewardCounter';
-import { useStaking } from './hooks/useStaking';
-import { StakingTier } from './config/contracts';
-import { stakingService } from './services/StakingService';
+import { MatrixRain }       from './components/MatrixRain';
+import { ScanLines }        from './components/ScanLines';
+import { PerspectiveGrid }  from './components/PerspectiveGrid';
+import { BitcoinCard }      from './components/BitcoinCard';
+import { TerminalForm }     from './components/TerminalForm';
+import { TerminalBar }      from './components/TerminalBar';
+import { useStaking }       from './hooks/useStaking';
+import { StakingTier }      from './config/contracts';
+import { stakingService }   from './services/StakingService';
 
-function App() {
+// ─── Terminal message helpers ─────────────────────────────────────────────────
+
+function truncate(s: string, n = 12) {
+    return s.length <= n ? s : `${s.slice(0, 8)}…${s.slice(-4)}`;
+}
+
+export default function App() {
     const [selectedTier, setSelectedTier] = useState<StakingTier | null>(null);
     const [currentBlock, setCurrentBlock] = useState<bigint>(0n);
-    const blockPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [messages, setMessages] = useState<string[]>(['System initialized. Awaiting connection…']);
+    const blockPoll = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const {
         wallet,
@@ -25,255 +33,245 @@ function App() {
         stake,
         unstake,
         claimRewards,
-        getCSVAddress,
     } = useStaking();
 
-    const isStaking = stakeInfo !== null && stakeInfo.satoshis > 0n;
-    const csvAddress = selectedTier ? getCSVAddress(selectedTier.lockBlocks) : '';
+    const isStaking = !!(stakeInfo && stakeInfo.satoshis > 0n);
 
-    // Poll for current block number (~every 10s)
+    // ── Terminal messages ────────────────────────────────────────────────────
+    const push = (msg: string) => setMessages((m) => [...m.slice(-20), msg]);
+
     useEffect(() => {
-        const fetchBlock = async () => {
+        if (wallet.connected) push(`Wallet linked. Node: ${truncate(wallet.address, 14)}`);
+    }, [wallet.connected]);
+
+    useEffect(() => {
+        if (isStaking && stakeInfo) {
+            push(`Active stake detected. Lock expires block #${stakeInfo.unlockBlock}.`);
+        }
+    }, [isStaking]);
+
+    useEffect(() => {
+        if (error) push(`Warning: ${error}`);
+    }, [error]);
+
+    // ── Block polling ────────────────────────────────────────────────────────
+    useEffect(() => {
+        const fetch = async () => {
             try {
                 const n = await stakingService.provider.getBlockNumber();
                 setCurrentBlock(BigInt(n));
-            } catch {
-                // ignore
-            }
+            } catch { /* ignore */ }
         };
-
-        fetchBlock();
-        blockPollRef.current = setInterval(fetchBlock, 10_000);
-        return () => {
-            if (blockPollRef.current) clearInterval(blockPollRef.current);
-        };
+        fetch();
+        blockPoll.current = setInterval(fetch, 10_000);
+        return () => { if (blockPoll.current) clearInterval(blockPoll.current); };
     }, []);
 
+    // ── Wrap actions with terminal logging ───────────────────────────────────
+    const handleStake = async (lockBlocks: bigint, satoshis: bigint, csv: string) => {
+        push(`Initiating stake… ${satoshis} sats, lock: ${lockBlocks} blocks.`);
+        const id = await stake(lockBlocks, satoshis, csv);
+        push(`Stake confirmed. Tx: ${truncate(id, 16)}`);
+        return id;
+    };
+
+    const handleUnstake = async () => {
+        push('Initiating unstake…');
+        const id = await unstake();
+        push(`Unstake confirmed. Tx: ${truncate(id, 16)}`);
+        return id;
+    };
+
+    const handleClaim = async () => {
+        push(`Claiming ${pendingRewards.toString()} HODL tokens…`);
+        const id = await claimRewards();
+        push(`Rewards claimed. Tx: ${truncate(id, 16)}`);
+        return id;
+    };
+
+    // ════════════════════════════════════════════════════════════════════════
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
-            <Header
-                connected={wallet.connected}
-                address={wallet.address}
-                balance={wallet.balance}
-                onConnect={connectWallet}
-                loading={loading}
-            />
+        <div style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
 
-            <main className="container" style={{ paddingTop: '48px', paddingBottom: '80px' }}>
-                {/* Hero */}
-                <div style={{ textAlign: 'center', marginBottom: '56px' }}>
-                    <h1
-                        style={{
-                            fontSize: 'clamp(28px, 5vw, 52px)',
-                            fontWeight: 700,
-                            color: '#f7931a',
-                            letterSpacing: '0.08em',
-                            marginBottom: '16px',
-                            textShadow: '0 0 40px rgba(247,147,26,0.4)',
-                        }}
-                    >
-                        PROOF OF HODL
-                    </h1>
-                    <p
-                        style={{
-                            fontSize: '16px',
-                            color: '#888',
-                            maxWidth: '560px',
-                            margin: '0 auto 24px',
-                            lineHeight: 1.7,
-                        }}
-                    >
-                        Lock Bitcoin in a CSV time-locked address and earn HODL tokens.
-                        <br />
-                        The longer you HODL, the higher your loyalty multiplier.
-                    </p>
+            {/* ─── Layer 0: Matrix rain canvas ─── */}
+            <MatrixRain />
 
-                    {/* Stats bar */}
-                    <div
-                        style={{
-                            display: 'inline-flex',
-                            gap: '32px',
-                            background: 'rgba(247,147,26,0.05)',
-                            border: '1px solid rgba(247,147,26,0.15)',
-                            borderRadius: '10px',
-                            padding: '14px 28px',
-                            fontSize: '13px',
-                        }}
-                    >
-                        <div>
-                            <span style={{ color: '#555' }}>TOTAL STAKED </span>
-                            <span style={{ color: '#f7931a', fontWeight: 700 }}>
-                                {(Number(totalStaked) / 1e8).toFixed(4)} BTC
-                            </span>
-                        </div>
-                        <div style={{ borderLeft: '1px solid rgba(255,255,255,0.08)', margin: '0 4px' }} />
-                        <div>
-                            <span style={{ color: '#555' }}>CURRENT BLOCK </span>
-                            <span style={{ color: '#888', fontWeight: 700 }}>
-                                #{currentBlock.toString()}
-                            </span>
-                        </div>
+            {/* ─── Layer 1: Perspective floor grid ─── */}
+            <PerspectiveGrid />
+
+            {/* ─── Layer 2: Glitch scan lines ─── */}
+            <ScanLines />
+
+            {/* ─── Layer 3: Content ─── */}
+            <div style={{ position: 'relative', zIndex: 10, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+
+                {/* ── Top bar ───────────────────────────────────────────── */}
+                <header style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '14px 32px',
+                    borderBottom: '1px solid rgba(0,255,65,0.12)',
+                    background: 'rgba(0,0,0,0.5)',
+                    backdropFilter: 'blur(6px)',
+                }}>
+                    <div className="terminal" style={{ fontSize: '11px', color: 'rgba(0,255,65,0.4)' }}>
+                        PROOF_OF_HODL.EXE &nbsp;|&nbsp; OPNet Testnet
                     </div>
-                </div>
 
-                {/* Global error */}
-                {error && (
-                    <div className="error-banner" style={{ maxWidth: '640px', margin: '0 auto 24px' }}>
-                        {error}
-                    </div>
-                )}
-
-                {/* Main content */}
-                {isStaking ? (
-                    /* ─── Active stake view ─── */
-                    <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-                        <StakeDashboard
-                            stakeInfo={stakeInfo!}
-                            currentBlock={currentBlock}
-                            onUnstake={unstake}
-                            txPending={txPending}
-                        />
-                        <RewardCounter
-                            pendingRewards={pendingRewards}
-                            onClaim={claimRewards}
-                            txPending={txPending}
-                            walletConnected={wallet.connected}
-                        />
-                    </div>
-                ) : (
-                    /* ─── New stake view ─── */
-                    <div style={{ maxWidth: '760px', margin: '0 auto' }}>
-                        <div className="section">
-                            <TierSelector
-                                selectedTier={selectedTier}
-                                onSelect={setSelectedTier}
-                            />
-                        </div>
-
-                        <StakeForm
-                            selectedTier={selectedTier}
-                            csvAddress={csvAddress}
-                            onStake={stake}
-                            txPending={txPending}
-                            walletConnected={wallet.connected}
-                        />
-
-                        {!wallet.connected && (
-                            <div
-                                style={{
-                                    textAlign: 'center',
-                                    marginTop: '48px',
-                                }}
-                            >
-                                <p style={{ color: '#555', marginBottom: '20px', fontSize: '14px' }}>
-                                    Connect your OPWallet to start staking
-                                </p>
-                                <button
-                                    className="btn-primary"
-                                    onClick={connectWallet}
-                                    disabled={loading}
-                                    style={{ fontSize: '16px', padding: '16px 40px' }}
-                                >
-                                    {loading ? (
-                                        <>
-                                            <span className="spinner" />
-                                            CONNECTING…
-                                        </>
-                                    ) : (
-                                        'CONNECT OPWALLET'
-                                    )}
-                                </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        {/* Total staked */}
+                        {totalStaked > 0n && (
+                            <div className="terminal" style={{ fontSize: '11px', color: 'rgba(0,255,65,0.45)' }}>
+                                NETWORK STAKE: {(Number(totalStaked) / 1e8).toFixed(4)} BTC
                             </div>
                         )}
-                    </div>
-                )}
 
-                {/* How it works */}
-                <div
-                    style={{
-                        maxWidth: '760px',
-                        margin: '64px auto 0',
-                        borderTop: '1px solid rgba(255,255,255,0.06)',
-                        paddingTop: '40px',
-                    }}
-                >
-                    <h2
-                        style={{
-                            fontSize: '14px',
-                            color: '#555',
-                            letterSpacing: '0.15em',
-                            marginBottom: '24px',
-                            textAlign: 'center',
-                        }}
-                    >
-                        HOW IT WORKS
-                    </h2>
-                    <div
-                        style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                            gap: '16px',
-                        }}
-                    >
-                        {[
-                            { step: '01', title: 'CHOOSE TIER', desc: 'Select a lock duration from 1 week to 2 months.' },
-                            { step: '02', title: 'STAKE BTC', desc: 'Send BTC to a CSV time-locked P2WSH address.' },
-                            { step: '03', title: 'HODL', desc: 'Your multiplier grows linearly over the lock period.' },
-                            { step: '04', title: 'CLAIM', desc: 'Claim HODL tokens anytime. Unstake after lock expires.' },
-                        ].map((item) => (
-                            <div
-                                key={item.step}
-                                style={{
-                                    background: '#111',
-                                    border: '1px solid rgba(255,255,255,0.06)',
-                                    borderRadius: '10px',
-                                    padding: '18px',
-                                }}
-                            >
-                                <div
-                                    style={{
-                                        fontSize: '24px',
-                                        color: 'rgba(247,147,26,0.3)',
-                                        fontWeight: 700,
-                                        marginBottom: '8px',
-                                    }}
-                                >
-                                    {item.step}
-                                </div>
-                                <div
-                                    style={{
-                                        fontSize: '13px',
-                                        fontWeight: 700,
-                                        color: '#e0e0e0',
-                                        marginBottom: '6px',
-                                        letterSpacing: '0.06em',
-                                    }}
-                                >
-                                    {item.title}
-                                </div>
-                                <div style={{ fontSize: '12px', color: '#666', lineHeight: 1.6 }}>
-                                    {item.desc}
-                                </div>
+                        {/* Block indicator */}
+                        {currentBlock > 0n && (
+                            <div className="digital-sm" style={{ color: 'rgba(0,255,65,0.5)' }}>
+                                BLK #{currentBlock.toString()}
                             </div>
-                        ))}
-                    </div>
-                </div>
-            </main>
+                        )}
 
-            {/* Footer */}
-            <footer
-                style={{
-                    borderTop: '1px solid rgba(255,255,255,0.05)',
-                    padding: '20px 24px',
-                    textAlign: 'center',
-                    fontSize: '12px',
-                    color: '#444',
-                }}
-            >
-                Proof of HODL · OPNet Testnet · Bitcoin Layer 1 Smart Contracts
-            </footer>
+                        {/* Wallet */}
+                        {wallet.connected ? (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                border: '1px solid rgba(0,255,65,0.3)',
+                                padding: '6px 14px',
+                                background: 'rgba(0,255,65,0.04)',
+                            }}>
+                                <div style={{
+                                    width: 6, height: 6, borderRadius: '50%',
+                                    background: 'var(--green)',
+                                    boxShadow: '0 0 8px var(--green)',
+                                }} className="anim-blink" />
+                                <span className="terminal" style={{ fontSize: '12px' }}>
+                                    {truncate(wallet.address, 16)}
+                                </span>
+                            </div>
+                        ) : null}
+                    </div>
+                </header>
+
+                {/* ── Hero section ──────────────────────────────────────── */}
+                <main style={{
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    padding: '0 5vw',
+                    paddingBottom: '120px', // room for form + terminal bar
+                }}>
+                    {/* Upper half: headline + card */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingTop: 'clamp(40px, 7vh, 80px)',
+                        paddingBottom: 'clamp(28px, 4vh, 48px)',
+                        gap: '40px',
+                    }}>
+                        {/* Left — Headline + CTA */}
+                        <div style={{ flex: 1 }}>
+                            <h1 className="headline" style={{ marginBottom: 'clamp(20px, 3vh, 36px)' }}>
+                                PROOF OF HODL.<br />
+                                LOCK THE<br />
+                                <span className="accent">CHAIN.</span>
+                            </h1>
+
+                            {!wallet.connected ? (
+                                <button
+                                    className="btn-jack-in"
+                                    onClick={connectWallet}
+                                    disabled={loading}
+                                >
+                                    {loading ? (
+                                        <>JACKING IN<span className="anim-blink">_</span></>
+                                    ) : 'JACK IN'}
+                                </button>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: '10px',
+                                        border: '1px solid rgba(0,255,65,0.35)',
+                                        padding: '10px 18px',
+                                        background: 'rgba(0,255,65,0.04)',
+                                        width: 'fit-content',
+                                    }}>
+                                        <div style={{
+                                            width: 7, height: 7, borderRadius: '50%',
+                                            background: 'var(--green)',
+                                            boxShadow: '0 0 10px var(--green)',
+                                        }} />
+                                        <span className="terminal" style={{ fontSize: '14px' }}>
+                                            CONNECTED
+                                        </span>
+                                    </div>
+                                    <div className="terminal" style={{ fontSize: '12px', color: 'rgba(0,255,65,0.4)', paddingLeft: '4px' }}>
+                                        {(Number(wallet.balance) / 1e8).toFixed(5)} BTC available
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Right — Bitcoin card */}
+                        <BitcoinCard
+                            currentBlock={currentBlock}
+                            stakeInfo={stakeInfo}
+                        />
+                    </div>
+
+                    {/* Lower half: form panel */}
+                    {wallet.connected && (
+                        <div className="anim-fade-in">
+                            <TerminalForm
+                                stakeInfo={stakeInfo}
+                                pendingRewards={pendingRewards}
+                                selectedTier={selectedTier}
+                                onTierSelect={setSelectedTier}
+                                onStake={handleStake}
+                                onUnstake={handleUnstake}
+                                onClaim={handleClaim}
+                                txPending={txPending}
+                                walletConnected={wallet.connected}
+                                currentBlock={currentBlock}
+                            />
+                        </div>
+                    )}
+
+                    {/* Not connected — ghost form hint */}
+                    {!wallet.connected && (
+                        <div style={{
+                            opacity: 0.25, pointerEvents: 'none', marginTop: '8px',
+                        }}>
+                            <div style={{
+                                border: '1px solid rgba(0,255,65,0.3)',
+                                background: 'rgba(0,5,1,0.5)',
+                            }}>
+                                {['INPUT STAKE AMOUNT', 'SELECT LOCK DURATION'].map((lbl, i) => (
+                                    <div key={lbl} style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: '220px 1px 1fr',
+                                        height: '64px',
+                                        borderBottom: i === 0 ? '1px solid rgba(0,255,65,0.18)' : 'none',
+                                    }}>
+                                        <div style={{ padding: '14px 20px', fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--green)', display: 'flex', alignItems: 'center' }}>{lbl}</div>
+                                        <div style={{ background: 'rgba(0,255,65,0.25)' }} />
+                                        <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center' }}>
+                                            <div style={{ width: '40%', height: 1, background: 'rgba(0,255,65,0.25)' }} />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--green)', padding: '8px 0' }}>
+                                &gt;_ Jack in to begin staking.
+                            </div>
+                        </div>
+                    )}
+                </main>
+            </div>
+
+            {/* ─── Layer 4: Terminal bar (fixed bottom) ─── */}
+            <TerminalBar messages={messages} />
         </div>
     );
 }
-
-export default App;
