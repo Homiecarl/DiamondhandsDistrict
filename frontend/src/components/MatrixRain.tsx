@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-const CHARS = '01アイウエオカキクケコABCDEF0123456789₿ΩΔ░▒';
+// Mix of binary, hex, and diamond/crystal characters
+const CHARS = '01◆◇✦✧⬡⬢ABCDEFabcdef0123456789▲△▴▵░▒▓';
 
 export function MatrixRain() {
     const ref = useRef<HTMLCanvasElement>(null);
@@ -9,7 +10,6 @@ export function MatrixRain() {
         const canvas = ref.current!;
         const ctx = canvas.getContext('2d')!;
         const FS = 14;
-
         let drops: number[] = [];
 
         const init = () => {
@@ -26,10 +26,11 @@ export function MatrixRain() {
 
         const draw = (ts: number) => {
             raf = requestAnimationFrame(draw);
-            if (ts - last < 40) return;
+            if (ts - last < 45) return;
             last = ts;
 
-            ctx.fillStyle = 'rgba(0,0,0,0.06)';
+            // Fade with dark blue instead of pure black
+            ctx.fillStyle = 'rgba(2, 11, 24, 0.07)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.font = `${FS}px "Courier New", monospace`;
 
@@ -37,9 +38,11 @@ export function MatrixRain() {
                 const y = drops[i] * FS;
                 const x = i * FS;
                 if (y > 0) {
-                    ctx.fillStyle = 'rgba(220,255,230,0.9)';
+                    // Head — bright ice blue / near white
+                    ctx.fillStyle = 'rgba(200, 240, 255, 0.92)';
                     ctx.fillText(CHARS[Math.floor(Math.random() * CHARS.length)], x, y);
-                    ctx.fillStyle = 'rgba(0,255,65,0.75)';
+                    // Second char — cyan blue
+                    ctx.fillStyle = 'rgba(0, 200, 255, 0.7)';
                     ctx.fillText(CHARS[Math.floor(Math.random() * CHARS.length)], x, y - FS);
                 }
                 drops[i]++;

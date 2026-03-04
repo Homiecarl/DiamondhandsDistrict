@@ -22,11 +22,11 @@ export function TerminalBar({ message }: { message: string }) {
     return (
         <div style={{
             position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
-            background: 'rgba(0,0,0,0.8)',
-            borderTop: '1px solid rgba(0,255,65,0.15)',
+            background: 'rgba(2, 8, 18, 0.88)',
+            borderTop: '1px solid rgba(0, 200, 255, 0.15)',
             padding: '8px 28px',
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            backdropFilter: 'blur(4px)',
+            backdropFilter: 'blur(6px)',
         }}>
             <span className="term" style={{ fontSize: '12px' }}>
                 &gt;_ {text}<span className="blink">▋</span>
