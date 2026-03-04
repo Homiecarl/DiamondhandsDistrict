@@ -1,36 +1,7 @@
-# Dependencies
 node_modules/
 **/node_modules/
-
-# Build outputs
-contract/build/
 frontend/dist/
 frontend/.vite/
-
-# Environment
 .env
-.env.local
-.env.*.local
-
-# Deployer keys — NEVER commit private keys
-deploy/.env
-
-# Editor
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
 .DS_Store
-Thumbs.db
-
-# TypeScript
-*.tsbuildinfo
-
-# Logs
 *.log
-npm-debug.log*
-
-# Coverage
-coverage/

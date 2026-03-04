@@ -1,277 +1,192 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { MatrixRain }       from './components/MatrixRain';
-import { ScanLines }        from './components/ScanLines';
-import { PerspectiveGrid }  from './components/PerspectiveGrid';
-import { BitcoinCard }      from './components/BitcoinCard';
-import { TerminalForm }     from './components/TerminalForm';
-import { TerminalBar }      from './components/TerminalBar';
-import { useStaking }       from './hooks/useStaking';
-import { StakingTier }      from './config/contracts';
-import { stakingService }   from './services/StakingService';
-
-// ─── Terminal message helpers ─────────────────────────────────────────────────
-
-function truncate(s: string, n = 12) {
-    return s.length <= n ? s : `${s.slice(0, 8)}…${s.slice(-4)}`;
-}
+import { useState } from 'react';
+import { MatrixRain }      from './components/MatrixRain';
+import { ScanLines }       from './components/ScanLines';
+import { PerspectiveGrid } from './components/PerspectiveGrid';
+import { TerminalBar }     from './components/TerminalBar';
+import './styles/globals.css';
 
 export default function App() {
-    const [selectedTier, setSelectedTier] = useState<StakingTier | null>(null);
-    const [currentBlock, setCurrentBlock] = useState<bigint>(0n);
-    const [messages, setMessages] = useState<string[]>(['System initialized. Awaiting connection…']);
-    const blockPoll = useRef<ReturnType<typeof setInterval> | null>(null);
+    const [field1, setField1] = useState('');
+    const [field2, setField2] = useState('');
+    const [status, setStatus] = useState('System initialized. Awaiting input…');
 
-    const {
-        wallet,
-        stakeInfo,
-        pendingRewards,
-        totalStaked,
-        loading,
-        txPending,
-        error,
-        connectWallet,
-        stake,
-        unstake,
-        claimRewards,
-    } = useStaking();
-
-    const isStaking = !!(stakeInfo && stakeInfo.satoshis > 0n);
-
-    // ── Terminal messages ────────────────────────────────────────────────────
-    const push = (msg: string) => setMessages((m) => [...m.slice(-20), msg]);
-
-    useEffect(() => {
-        if (wallet.connected) push(`Wallet linked. Node: ${truncate(wallet.address, 14)}`);
-    }, [wallet.connected]);
-
-    useEffect(() => {
-        if (isStaking && stakeInfo) {
-            push(`Active stake detected. Lock expires block #${stakeInfo.unlockBlock}.`);
-        }
-    }, [isStaking]);
-
-    useEffect(() => {
-        if (error) push(`Warning: ${error}`);
-    }, [error]);
-
-    // ── Block polling ────────────────────────────────────────────────────────
-    useEffect(() => {
-        const fetch = async () => {
-            try {
-                const n = await stakingService.provider.getBlockNumber();
-                setCurrentBlock(BigInt(n));
-            } catch { /* ignore */ }
-        };
-        fetch();
-        blockPoll.current = setInterval(fetch, 10_000);
-        return () => { if (blockPoll.current) clearInterval(blockPoll.current); };
-    }, []);
-
-    // ── Wrap actions with terminal logging ───────────────────────────────────
-    const handleStake = async (lockBlocks: bigint, satoshis: bigint, csv: string) => {
-        push(`Initiating stake… ${satoshis} sats, lock: ${lockBlocks} blocks.`);
-        const id = await stake(lockBlocks, satoshis, csv);
-        push(`Stake confirmed. Tx: ${truncate(id, 16)}`);
-        return id;
+    const handleAction = () => {
+        setStatus(`Processing: ${field1 || 'anonymous'} — ${field2 || 'no data'}…`);
     };
 
-    const handleUnstake = async () => {
-        push('Initiating unstake…');
-        const id = await unstake();
-        push(`Unstake confirmed. Tx: ${truncate(id, 16)}`);
-        return id;
-    };
-
-    const handleClaim = async () => {
-        push(`Claiming ${pendingRewards.toString()} HODL tokens…`);
-        const id = await claimRewards();
-        push(`Rewards claimed. Tx: ${truncate(id, 16)}`);
-        return id;
-    };
-
-    // ════════════════════════════════════════════════════════════════════════
     return (
         <div style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
 
-            {/* ─── Layer 0: Matrix rain canvas ─── */}
+            {/* Backgrounds */}
             <MatrixRain />
-
-            {/* ─── Layer 1: Perspective floor grid ─── */}
             <PerspectiveGrid />
-
-            {/* ─── Layer 2: Glitch scan lines ─── */}
             <ScanLines />
 
-            {/* ─── Layer 3: Content ─── */}
+            {/* Content */}
             <div style={{ position: 'relative', zIndex: 10, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-                {/* ── Top bar ───────────────────────────────────────────── */}
+                {/* Top bar */}
                 <header style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    padding: '14px 32px',
+                    padding: '12px 32px',
                     borderBottom: '1px solid rgba(0,255,65,0.12)',
                     background: 'rgba(0,0,0,0.5)',
                     backdropFilter: 'blur(6px)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
-                    <div className="terminal" style={{ fontSize: '11px', color: 'rgba(0,255,65,0.4)' }}>
-                        PROOF_OF_HODL.EXE &nbsp;|&nbsp; OPNet Testnet
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        {/* Total staked */}
-                        {totalStaked > 0n && (
-                            <div className="terminal" style={{ fontSize: '11px', color: 'rgba(0,255,65,0.45)' }}>
-                                NETWORK STAKE: {(Number(totalStaked) / 1e8).toFixed(4)} BTC
-                            </div>
-                        )}
-
-                        {/* Block indicator */}
-                        {currentBlock > 0n && (
-                            <div className="digital-sm" style={{ color: 'rgba(0,255,65,0.5)' }}>
-                                BLK #{currentBlock.toString()}
-                            </div>
-                        )}
-
-                        {/* Wallet */}
-                        {wallet.connected ? (
-                            <div style={{
-                                display: 'flex', alignItems: 'center', gap: '8px',
-                                border: '1px solid rgba(0,255,65,0.3)',
-                                padding: '6px 14px',
-                                background: 'rgba(0,255,65,0.04)',
-                            }}>
-                                <div style={{
-                                    width: 6, height: 6, borderRadius: '50%',
-                                    background: 'var(--green)',
-                                    boxShadow: '0 0 8px var(--green)',
-                                }} className="anim-blink" />
-                                <span className="terminal" style={{ fontSize: '12px' }}>
-                                    {truncate(wallet.address, 16)}
-                                </span>
-                            </div>
-                        ) : null}
-                    </div>
+                    <span className="term term-dim" style={{ fontSize: '11px', letterSpacing: '0.15em' }}>
+                        PROJECT_NAME.EXE
+                    </span>
+                    <span className="term term-dim" style={{ fontSize: '11px' }}>
+                        16:9
+                    </span>
                 </header>
 
-                {/* ── Hero section ──────────────────────────────────────── */}
+                {/* Hero */}
                 <main style={{
                     flex: 1,
+                    padding: '0 6vw',
+                    paddingBottom: '160px',
                     display: 'flex',
                     flexDirection: 'column',
-                    padding: '0 5vw',
-                    paddingBottom: '120px', // room for form + terminal bar
+                    justifyContent: 'center',
                 }}>
-                    {/* Upper half: headline + card */}
+                    {/* Upper row — headline + card */}
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        paddingTop: 'clamp(40px, 7vh, 80px)',
-                        paddingBottom: 'clamp(28px, 4vh, 48px)',
                         gap: '40px',
+                        marginBottom: '40px',
                     }}>
-                        {/* Left — Headline + CTA */}
-                        <div style={{ flex: 1 }}>
-                            <h1 className="headline" style={{ marginBottom: 'clamp(20px, 3vh, 36px)' }}>
-                                PROOF OF HODL.<br />
-                                LOCK THE<br />
-                                <span className="accent">CHAIN.</span>
+                        {/* Left — headline + CTA */}
+                        <div>
+                            <h1 className="headline" style={{ marginBottom: '32px' }}>
+                                ENTER THE RAFFLE.<br />
+                                FOLLOW THE<br />
+                                <span className="green">WHITE RABBIT.</span>
                             </h1>
-
-                            {!wallet.connected ? (
-                                <button
-                                    className="btn-jack-in"
-                                    onClick={connectWallet}
-                                    disabled={loading}
-                                >
-                                    {loading ? (
-                                        <>JACKING IN<span className="anim-blink">_</span></>
-                                    ) : 'JACK IN'}
-                                </button>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{
-                                        display: 'inline-flex', alignItems: 'center', gap: '10px',
-                                        border: '1px solid rgba(0,255,65,0.35)',
-                                        padding: '10px 18px',
-                                        background: 'rgba(0,255,65,0.04)',
-                                        width: 'fit-content',
-                                    }}>
-                                        <div style={{
-                                            width: 7, height: 7, borderRadius: '50%',
-                                            background: 'var(--green)',
-                                            boxShadow: '0 0 10px var(--green)',
-                                        }} />
-                                        <span className="terminal" style={{ fontSize: '14px' }}>
-                                            CONNECTED
-                                        </span>
-                                    </div>
-                                    <div className="terminal" style={{ fontSize: '12px', color: 'rgba(0,255,65,0.4)', paddingLeft: '4px' }}>
-                                        {(Number(wallet.balance) / 1e8).toFixed(5)} BTC available
-                                    </div>
-                                </div>
-                            )}
+                            <button
+                                className="btn-jack"
+                                onClick={() => setStatus('Jacking in…')}
+                            >
+                                JACK IN
+                            </button>
                         </div>
 
-                        {/* Right — Bitcoin card */}
-                        <BitcoinCard
-                            currentBlock={currentBlock}
-                            stakeInfo={stakeInfo}
-                        />
+                        {/* Right — glowing card */}
+                        <div
+                            className="glow-card"
+                            style={{
+                                width: 220, flexShrink: 0,
+                                borderRadius: 4, overflow: 'hidden',
+                            }}
+                        >
+                            {/* Indicator dot */}
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0', borderBottom: '1px solid rgba(0,255,65,0.15)' }}>
+                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 10px var(--green)' }} className="blink" />
+                            </div>
+
+                            {/* Card image / icon area */}
+                            <div style={{
+                                height: 160,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                borderBottom: '1px solid rgba(0,255,65,0.15)',
+                                background: 'linear-gradient(135deg, rgba(0,20,5,0.8) 0%, rgba(0,8,2,0.95) 100%)',
+                                position: 'relative',
+                            }}>
+                                {/* Ornate corner brackets */}
+                                {['topLeft','topRight','bottomLeft','bottomRight'].map(pos => (
+                                    <div key={pos} style={{
+                                        position: 'absolute',
+                                        width: 14, height: 14,
+                                        borderColor: 'rgba(180,140,40,0.7)',
+                                        borderStyle: 'solid',
+                                        borderWidth: 0,
+                                        borderTopWidth:    pos.includes('top')    ? 2 : 0,
+                                        borderBottomWidth: pos.includes('bottom') ? 2 : 0,
+                                        borderLeftWidth:   pos.includes('Left')   ? 2 : 0,
+                                        borderRightWidth:  pos.includes('Right')  ? 2 : 0,
+                                        top:    pos.includes('top')    ? 10 : undefined,
+                                        bottom: pos.includes('bottom') ? 10 : undefined,
+                                        left:   pos.includes('Left')   ? 10 : undefined,
+                                        right:  pos.includes('Right')  ? 10 : undefined,
+                                    }} />
+                                ))}
+                                {/* Placeholder icon — replace with project image */}
+                                <div style={{
+                                    fontSize: 56,
+                                    filter: 'drop-shadow(0 0 20px rgba(0,255,65,0.4))',
+                                    userSelect: 'none',
+                                }}>
+                                    🐇
+                                </div>
+                            </div>
+
+                            {/* Digital display */}
+                            <div style={{ padding: '12px 0', textAlign: 'center' }}>
+                                <div style={{ fontFamily: 'var(--font-digit)', fontSize: 22, color: 'var(--green)', letterSpacing: '0.12em', textShadow: '0 0 14px var(--green-glow)' }}>
+                                    00:00:00
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Lower half: form panel */}
-                    {wallet.connected && (
-                        <div className="anim-fade-in">
-                            <TerminalForm
-                                stakeInfo={stakeInfo}
-                                pendingRewards={pendingRewards}
-                                selectedTier={selectedTier}
-                                onTierSelect={setSelectedTier}
-                                onStake={handleStake}
-                                onUnstake={handleUnstake}
-                                onClaim={handleClaim}
-                                txPending={txPending}
-                                walletConnected={wallet.connected}
-                                currentBlock={currentBlock}
-                            />
-                        </div>
-                    )}
+                    {/* Lower row — terminal form */}
+                    <div style={{ background: 'rgba(0,5,1,0.88)', border: '1px solid rgba(0,255,65,0.35)', boxShadow: '0 0 30px rgba(0,255,65,0.07)' }}>
 
-                    {/* Not connected — ghost form hint */}
-                    {!wallet.connected && (
-                        <div style={{
-                            opacity: 0.25, pointerEvents: 'none', marginTop: '8px',
-                        }}>
-                            <div style={{
-                                border: '1px solid rgba(0,255,65,0.3)',
-                                background: 'rgba(0,5,1,0.5)',
-                            }}>
-                                {['INPUT STAKE AMOUNT', 'SELECT LOCK DURATION'].map((lbl, i) => (
-                                    <div key={lbl} style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: '220px 1px 1fr',
-                                        height: '64px',
-                                        borderBottom: i === 0 ? '1px solid rgba(0,255,65,0.18)' : 'none',
-                                    }}>
-                                        <div style={{ padding: '14px 20px', fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--green)', display: 'flex', alignItems: 'center' }}>{lbl}</div>
-                                        <div style={{ background: 'rgba(0,255,65,0.25)' }} />
-                                        <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center' }}>
-                                            <div style={{ width: '40%', height: 1, background: 'rgba(0,255,65,0.25)' }} />
-                                        </div>
-                                    </div>
-                                ))}
+                        {/* Row 1 */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '220px 1px 1fr', borderBottom: '1px solid rgba(0,255,65,0.18)' }}>
+                            <div style={{ padding: '18px 20px', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--green)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+                                INPUT HANDLE
                             </div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--green)', padding: '8px 0' }}>
-                                &gt;_ Jack in to begin staking.
+                            <div style={{ background: 'rgba(0,255,65,0.25)' }} />
+                            <div style={{ padding: '18px 20px', display: 'flex', alignItems: 'center' }}>
+                                <input
+                                    className="matrix-input"
+                                    placeholder="Name"
+                                    value={field1}
+                                    onChange={e => setField1(e.target.value)}
+                                />
                             </div>
                         </div>
-                    )}
+
+                        {/* Row 2 */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '220px 1px 1fr' }}>
+                            <div style={{ padding: '18px 20px', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--green)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center' }}>
+                                INPUT RESISTANCE NODE
+                            </div>
+                            <div style={{ background: 'rgba(0,255,65,0.25)' }} />
+                            <div style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <input
+                                    className="matrix-input"
+                                    placeholder="email"
+                                    value={field2}
+                                    onChange={e => setField2(e.target.value)}
+                                    style={{ flex: 1 }}
+                                />
+                                <button
+                                    className="btn-green"
+                                    onClick={handleAction}
+                                    style={{ width: 'auto', padding: '12px 22px', whiteSpace: 'nowrap' }}
+                                >
+                                    INITIATE TRANSFER.
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* Status line below form */}
+                    <div style={{ marginTop: 8 }}>
+                        <span className="term term-dim" style={{ fontSize: 12 }}>
+                            &gt;_ {status}
+                        </span>
+                    </div>
+
                 </main>
             </div>
 
-            {/* ─── Layer 4: Terminal bar (fixed bottom) ─── */}
-            <TerminalBar messages={messages} />
+            <TerminalBar message={status} />
         </div>
     );
 }
