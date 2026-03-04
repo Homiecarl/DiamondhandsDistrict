@@ -1,0 +1,21 @@
+{
+  "name": "proof-of-hodl-contract",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "asc src/index.ts --config asconfig.json --target debug",
+    "build:release": "asc src/index.ts --config asconfig.json --target release"
+  },
+  "dependencies": {
+    "@btc-vision/as-bignum": "latest",
+    "@btc-vision/assemblyscript": "latest",
+    "@btc-vision/btc-runtime": "rc",
+    "@btc-vision/opnet-transform": "latest",
+    "@assemblyscript/loader": "latest"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2"
+  }
+}
