@@ -100,6 +100,25 @@ export const OP721Abi = [
         type: BitcoinAbiTypes.Function,
     },
     {
+        name: 'transfer',
+        inputs: [
+            { name: 'to', type: ABIDataTypes.ADDRESS },
+            { name: 'tokenId', type: ABIDataTypes.UINT256 },
+        ],
+        outputs: [],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
+        name: 'transferFrom',
+        inputs: [
+            { name: 'from', type: ABIDataTypes.ADDRESS },
+            { name: 'to', type: ABIDataTypes.ADDRESS },
+            { name: 'tokenId', type: ABIDataTypes.UINT256 },
+        ],
+        outputs: [],
+        type: BitcoinAbiTypes.Function,
+    },
+    {
         name: 'safeTransfer',
         inputs: [
             { name: 'to', type: ABIDataTypes.ADDRESS },

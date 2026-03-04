@@ -140,6 +140,44 @@
             ]
         },
         {
+            "name": "transfer",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "to",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "transferFrom",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "from",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "to",
+                    "type": "ADDRESS"
+                },
+                {
+                    "name": "tokenId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": []
+        },
+        {
             "name": "safeTransfer",
             "type": "Function",
             "payable": false,

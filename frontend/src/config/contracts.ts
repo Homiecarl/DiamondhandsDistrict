@@ -1,5 +1,5 @@
 // Contract configuration — update VAULT_ADDRESS after deployment
-export const VAULT_ADDRESS = ''; // TBD: set after testnet deployment
+export const VAULT_ADDRESS = 'opt1sqptlzg4xgkam9guk7gqyp8zhhjtt44hsjuxu69sl';
 export const OPNET_TESTNET_URL = 'https://testnet.opnet.org';
 export const BLOCKS_PER_DAY = 144;
 
