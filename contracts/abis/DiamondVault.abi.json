@@ -1,0 +1,284 @@
+{
+    "functions": [
+        {
+            "name": "deposit",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "amountSats",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "withdraw",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "amountSats",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "claimYield",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "motoAmount",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "openRaffle",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "newRaffleId",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "closeEntries",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "raffleId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "draw",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "raffleId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "addMoto",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "seedJackpot",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "amount",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "setMotoToken",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "tokenAddr",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "transferOwnership",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "newOwner",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "success",
+                    "type": "BOOL"
+                }
+            ]
+        },
+        {
+            "name": "getUserPosition",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "user",
+                    "type": "ADDRESS"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "stake",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "pendingMoto",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "raffleId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "tickets",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "entryBlock",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "getProtocolStats",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "totalStaked",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "prizePool",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "nftTreasury",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "currentRaffleId",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "motoPerBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "boostActive",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "milestoneIdx",
+                    "type": "UINT256"
+                }
+            ]
+        },
+        {
+            "name": "getRaffleInfo",
+            "type": "Function",
+            "payable": false,
+            "onlyOwner": false,
+            "inputs": [
+                {
+                    "name": "raffleId",
+                    "type": "UINT256"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "startBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "entryCloseBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "drawBlock",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "state",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "participantCount",
+                    "type": "UINT256"
+                },
+                {
+                    "name": "totalTickets",
+                    "type": "UINT256"
+                }
+            ]
+        }
+    ],
+    "events": []
+}

@@ -1,0 +1,20 @@
+{
+    "name": "diamond-hands-contracts",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+        "build": "npm run build:vault && npm run build:mock",
+        "build:vault": "asc src/diamond/index.ts --target diamond --measure --uncheckedBehavior never",
+        "build:mock": "asc src/mock/index.ts --target mockMoto --measure --uncheckedBehavior never",
+        "format": "prettier --write ."
+    },
+    "dependencies": {
+        "@btc-vision/as-bignum": "latest",
+        "@btc-vision/btc-runtime": "latest",
+        "@btc-vision/opnet-transform": "latest"
+    },
+    "devDependencies": {
+        "@btc-vision/assemblyscript": "^0.29.2",
+        "prettier": "latest"
+    }
+}

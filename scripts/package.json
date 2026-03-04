@@ -1,0 +1,26 @@
+{
+  "name": "diamond-deploy-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy:vault": "tsx deploy.ts vault",
+    "deploy:mock": "tsx deploy.ts mock",
+    "deploy:all": "tsx deploy.ts all"
+  },
+  "dependencies": {
+    "opnet": "rc",
+    "@btc-vision/transaction": "rc",
+    "@btc-vision/bitcoin": "rc",
+    "@btc-vision/ecpair": "latest",
+    "dotenv": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "tsx": "latest",
+    "typescript": "latest"
+  },
+  "overrides": {
+    "@noble/hashes": "2.0.1"
+  }
+}
