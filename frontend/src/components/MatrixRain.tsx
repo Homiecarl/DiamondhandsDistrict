@@ -61,6 +61,8 @@ export function MatrixRain() {
             position: 'fixed', inset: 0,
             width: '100%', height: '100%',
             zIndex: 0, pointerEvents: 'none',
+            maskImage: 'linear-gradient(to right, black 0%, black 4%, transparent 11%, transparent 89%, black 96%, black 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, black 0%, black 4%, transparent 11%, transparent 89%, black 96%, black 100%)',
         }} />
     );
 }

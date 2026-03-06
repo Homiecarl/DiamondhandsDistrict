@@ -3,6 +3,8 @@ import { useWalletConnect } from '@btc-vision/walletconnect';
 import {
     fetchProtocolStats,
     fetchUserPosition,
+    fetchCurrentBlock,
+    fetchVaultMotoBalance,
     txDeposit,
     txWithdraw,
     txClaimYield,
@@ -34,6 +36,8 @@ export function useVault() {
 
     const [stats, setStats] = useState<ProtocolStats>(EMPTY_STATS);
     const [position, setPosition] = useState<UserPosition>(EMPTY_POSITION);
+    const [currentBlock, setCurrentBlock] = useState(0n);
+    const [vaultMotoBalance, setVaultMotoBalance] = useState(0n);
     const [loading, setLoading] = useState(false);
     const [txPending, setTxPending] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -46,8 +50,14 @@ export function useVault() {
         setLoading(true);
         setError(null);
         try {
-            const s = await fetchProtocolStats(provider);
+            const [s, block, motoBalance] = await Promise.all([
+                fetchProtocolStats(provider),
+                fetchCurrentBlock(provider),
+                fetchVaultMotoBalance(provider),
+            ]);
             setStats(s);
+            setCurrentBlock(block);
+            setVaultMotoBalance(motoBalance);
             if (address) {
                 const pos = await fetchUserPosition(address, provider);
                 setPosition(pos);
@@ -123,6 +133,8 @@ export function useVault() {
     return {
         stats,
         position,
+        currentBlock,
+        vaultMotoBalance,
         loading,
         txPending,
         error,

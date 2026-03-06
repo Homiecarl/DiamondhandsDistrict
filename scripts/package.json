@@ -7,15 +7,18 @@
     "deploy:vault": "tsx deploy.ts vault",
     "deploy:mock": "tsx deploy.ts mock",
     "deploy:all": "tsx deploy.ts all",
-    "setup": "tsx setup.ts"
+    "setup": "tsx setup.ts",
+    "addmoto": "tsx addmoto.ts",
+    "transfer-moto": "tsx transfer-moto.ts",
+    "status": "tsx status.ts"
   },
   "dependencies": {
-    "opnet": "1.8.1-rc.12",
-    "@btc-vision/transaction": "rc",
-    "@btc-vision/bitcoin": "rc",
     "@btc-vision/bip32": "latest",
+    "@btc-vision/bitcoin": "rc",
     "@btc-vision/ecpair": "latest",
-    "dotenv": "latest"
+    "@btc-vision/transaction": "rc",
+    "dotenv": "latest",
+    "opnet": "1.8.1-rc.12"
   },
   "devDependencies": {
     "@types/node": "latest",

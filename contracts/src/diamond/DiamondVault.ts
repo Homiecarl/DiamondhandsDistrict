@@ -1,7 +1,6 @@
 import { u256 } from '@btc-vision/as-bignum/assembly';
 import {
     Address,
-    AddressMemoryMap,
     Blockchain,
     BytesWriter,
     Calldata,
@@ -121,10 +120,10 @@ export class DiamondVault extends OP_NET {
     private readonly pSeeded: u16 = Blockchain.nextPointer;
 
     // ── Storage instances (inline-initialized in declaration order) ───────
-    private readonly userStake: AddressMemoryMap = new AddressMemoryMap(this.pUserStake);
-    private readonly userDebt: AddressMemoryMap = new AddressMemoryMap(this.pUserDebt);
-    private readonly userRaffle: AddressMemoryMap = new AddressMemoryMap(this.pUserRaffle);
-    private readonly userEntry: AddressMemoryMap = new AddressMemoryMap(this.pUserEntry);
+    private readonly userStake: StoredMapU256 = new StoredMapU256(this.pUserStake);
+    private readonly userDebt: StoredMapU256 = new StoredMapU256(this.pUserDebt);
+    private readonly userRaffle: StoredMapU256 = new StoredMapU256(this.pUserRaffle);
+    private readonly userEntry: StoredMapU256 = new StoredMapU256(this.pUserEntry);
     private readonly totalStaked: StoredU256 = new StoredU256(
         this.pTotalStaked,
         emptySubPtr(),
@@ -232,13 +231,13 @@ export class DiamondVault extends OP_NET {
 
         this.updateAcc();
 
-        const prev = this.userStake.get(user);
+        const prev = this.userStake.get(addrToU256(user));
         if (u256.gt(prev, u256.Zero)) this.settleDebt(user, prev);
 
         const next = SafeMath.add(prev, net);
-        this.userStake.set(user, next);
+        this.userStake.set(addrToU256(user), next);
         this.totalStaked.set(SafeMath.add(this.totalStaked.value, net));
-        this.userDebt.set(user, frac(next, this.accMoto.value, ACC_SCALE));
+        this.userDebt.set(addrToU256(user), frac(next, this.accMoto.value, ACC_SCALE));
 
         this.addToPool(fee);
         const rid = this.assignRaffle(user, next);
@@ -258,7 +257,7 @@ export class DiamondVault extends OP_NET {
         if (u256.eq(amount, u256.Zero)) throw new Revert('Amount must be > 0');
 
         const user = Blockchain.tx.sender;
-        const prev = this.userStake.get(user);
+        const prev = this.userStake.get(addrToU256(user));
         if (u256.lt(prev, amount)) throw new Revert('Insufficient stake');
 
         this.updateAcc();
@@ -268,9 +267,9 @@ export class DiamondVault extends OP_NET {
         const net = SafeMath.sub(amount, fee);
         const next = SafeMath.sub(prev, amount);
 
-        this.userStake.set(user, next);
+        this.userStake.set(addrToU256(user), next);
         this.totalStaked.set(SafeMath.sub(this.totalStaked.value, amount));
-        this.userDebt.set(user, frac(next, this.accMoto.value, ACC_SCALE));
+        this.userDebt.set(addrToU256(user), frac(next, this.accMoto.value, ACC_SCALE));
 
         this.addToPool(fee);
         this.emitEvent(new WithdrawnEvent(user, net, fee));
@@ -286,7 +285,7 @@ export class DiamondVault extends OP_NET {
         const user = Blockchain.tx.sender;
         this.updateAcc();
 
-        const stake = this.userStake.get(user);
+        const stake = this.userStake.get(addrToU256(user));
         if (u256.eq(stake, u256.Zero)) throw new Revert('No active stake');
 
         const pending = this.pendingYield(user, stake);
@@ -296,7 +295,7 @@ export class DiamondVault extends OP_NET {
         const toUser = frac(pending, isBoost ? USER_BOOST_BPS : USER_BPS, YIELD_DENOM);
         const toPool = frac(pending, isBoost ? POOL_BOOST_BPS : POOL_BPS, YIELD_DENOM);
 
-        this.userDebt.set(user, frac(stake, this.accMoto.value, ACC_SCALE));
+        this.userDebt.set(addrToU256(user), frac(stake, this.accMoto.value, ACC_SCALE));
         this.addToPool(toPool);
         this.transferMoto(user, toUser);
         this.emitEvent(new YieldClaimedEvent(user, toUser, toPool));
@@ -467,11 +466,11 @@ export class DiamondVault extends OP_NET {
     )
     public getUserPosition(calldata: Calldata): BytesWriter {
         const user = calldata.readAddress();
-        const stake = this.userStake.get(user);
+        const stake = this.userStake.get(addrToU256(user));
         const pending = this.pendingYield(user, stake);
-        const rid = this.userRaffle.get(user);
+        const rid = this.userRaffle.get(addrToU256(user));
         const tix = u256.gt(rid, u256.Zero) ? this.getTix(rid, user) : u256.Zero;
-        const entryBlk = this.userEntry.get(user);
+        const entryBlk = this.userEntry.get(addrToU256(user));
 
         const w = new BytesWriter(U256_BYTE_LENGTH * 5);
         w.writeU256(stake);
@@ -553,13 +552,13 @@ export class DiamondVault extends OP_NET {
     private pendingYield(user: Address, stake: u256): u256 {
         if (u256.eq(stake, u256.Zero)) return u256.Zero;
         const gross = frac(stake, this.accMoto.value, ACC_SCALE);
-        const debt = this.userDebt.get(user);
+        const debt = this.userDebt.get(addrToU256(user));
         if (u256.le(gross, debt)) return u256.Zero;
         return SafeMath.sub(gross, debt);
     }
 
     private settleDebt(user: Address, stake: u256): void {
-        this.userDebt.set(user, frac(stake, this.accMoto.value, ACC_SCALE));
+        this.userDebt.set(addrToU256(user), frac(stake, this.accMoto.value, ACC_SCALE));
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -610,8 +609,8 @@ export class DiamondVault extends OP_NET {
         const curBlk = u256.fromU64(Blockchain.block.number);
 
         if (u256.eq(state, STATE_OPEN) && u256.lt(curBlk, this.rClose.get(rid))) {
-            this.userRaffle.set(user, rid);
-            this.userEntry.set(user, curBlk);
+            this.userRaffle.set(addrToU256(user), rid);
+            this.userEntry.set(addrToU256(user), curBlk);
             this.addParticipant(user, rid, stake, curBlk);
             return rid;
         }
