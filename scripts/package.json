@@ -10,7 +10,8 @@
     "setup": "tsx setup.ts",
     "addmoto": "tsx addmoto.ts",
     "transfer-moto": "tsx transfer-moto.ts",
-    "status": "tsx status.ts"
+    "status": "tsx status.ts",
+    "keygen": "tsx keygen.ts"
   },
   "dependencies": {
     "@btc-vision/bip32": "latest",
